@@ -41,19 +41,28 @@ class CenterLossNet(nn.Module):
         # loss = F.nll_loss(info_NCE, labels)
 
         # 加入负样本
-        all_centers = _centers.unsqueeze(0).repeat(self.classes, 1, 1)
-        mask = torch.ones((self.classes,self.classes), device=_centers.device) - torch.eye(self.classes, device=_centers.device)
-        mask = mask.unsqueeze(2).repeat(1,1,self.feature_dim)
-        neg_centers = all_centers * mask
-        neg_syn_centers = torch.sum(neg_centers, dim=1)
-        neg_syn_norm = neg_syn_centers / torch.norm(neg_syn_centers, p=2, dim=-1).unsqueeze(1)
-        # 69.3
-        pos_centers = _centers - neg_syn_norm
-        pos_centers = pos_centers / torch.norm(pos_centers, p=2, dim=-1).unsqueeze(1)
-        theta = F.sigmoid(torch.mm(_features, pos_centers.t()))
-        logits = theta.gather(1, labels.unsqueeze(1))
-        entropy = - torch.log(logits)
-        loss = entropy.mean()
+        # all_centers = _centers.unsqueeze(0).repeat(self.classes, 1, 1)
+        # mask = torch.ones((self.classes,self.classes), device=_centers.device) - torch.eye(self.classes, device=_centers.device)
+        # mask = mask.unsqueeze(2).repeat(1,1,self.feature_dim)
+        # neg_centers = all_centers * mask
+        # neg_syn_centers = torch.sum(neg_centers, dim=1)
+        # # neg_syn_norm = neg_syn_centers / torch.norm(neg_syn_centers, p=2, dim=-1).unsqueeze(1)
+        # neg_syn_norm = neg_syn_centers / (len(_centers)-1)
+        # # 69.3
+        # pos_centers = _centers - neg_syn_norm
+        # pos_centers = pos_centers / torch.norm(pos_centers, p=2, dim=-1).unsqueeze(1)
+
+        # # theta = F.sigmoid(torch.mm(_features, pos_centers.t()))
+        # theta = torch.mm(_features, pos_centers.t())
+        # logits = theta.gather(1, labels.unsqueeze(1))
+        # # entropy = - torch.log(logits)
+        # loss = -logits.mean()
+
+        # 改为高斯核函数
+        extend_centers = _centers.unsqueeze(0).repeat(len(_features), 1, 1)
+        extend_features = _features.unsqueeze(1).repeat(1, len(_centers), 1)
+        dis_centers_features = -torch.pow(extend_features - extend_centers, 2).sum(-1) * 0.5
+        loss = F.cross_entropy(dis_centers_features, labels)
 
         if reduction == 'sum':  # 返回loss的和
             centers_batch = self.centers.index_select(dim=0, index=labels.long())
