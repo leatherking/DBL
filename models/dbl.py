@@ -13,39 +13,70 @@ from utils.toolkit import target2onehot, tensor2numpy
 from loss import CenterLossNet
 import pdb
 import wandb
-# wandb.init(project="DBL-data-watching")
+from copy import deepcopy
+wandb.init(project="DBL-data-watching")
 
 EPSILON = 1e-8
-
-# CIFAR-100
 init_epoch = 200
 init_lr = 0.1
 init_milestones = [60, 120, 170]
 init_lr_decay = 0.1
 init_weight_decay = 0.0005
-
 epochs = 170
 lrate = 0.1
 milestones = [80, 120]
 lrate_decay = 0.1
-batch_size = 64
+batch_size = 128
 weight_decay = 2e-4
-
-# CIFAR-10
-# init_epoch = 100
-# init_lr = 0.1
-# init_milestones = [40, 80]
-# init_lr_decay = 0.1
-# init_weight_decay = 0.0005
-
-# epochs = 100
-# lrate = 0.1
-# milestones = [40, 80]
-# lrate_decay = 0.1
-# batch_size = 128
-# weight_decay = 2e-4
 num_workers = 4
 T = 2
+
+def init_args(dataset='CIFAR100'):
+    # CIFAR-100
+    global init_epoch, init_lr, init_milestones, init_lr_decay, init_weight_decay, epochs, \
+                                lrate, milestones, lrate_decay, batch_size, weight_decay
+    dataset = dataset.lower()
+    if dataset == 'cifar100':
+        init_epoch = 200
+        init_lr = 0.1
+        init_milestones = [60, 120, 170]
+        init_lr_decay = 0.1
+        init_weight_decay = 0.0005
+
+        epochs = 170
+        lrate = 0.1
+        milestones = [80, 120]
+        lrate_decay = 0.1
+        batch_size = 128
+        weight_decay = 2e-4
+
+    elif dataset == 'imagenet100':
+        init_epoch = 120
+        init_lr = 0.1
+        init_milestones = [30,60,80,90]
+        init_lr_decay = 0.1
+        init_weight_decay = 0.0005
+
+        epochs = 120
+        lrate = 0.1
+        milestones = [30,60,80,90]
+        lrate_decay = 0.1
+        batch_size = 256
+        weight_decay = 5e-4
+    elif dataset == 'cifar10':
+        init_epoch = 100
+        init_lr = 0.1
+        init_milestones = [40, 80]
+        init_lr_decay = 0.1
+        init_weight_decay = 0.0005
+
+        epochs = 100
+        lrate = 0.1
+        milestones = [40, 80]
+        lrate_decay = 0.1
+        batch_size = 128
+        weight_decay = 2e-4
+
 
 
 class DBL(BaseLearner):
@@ -53,9 +84,11 @@ class DBL(BaseLearner):
         super().__init__(args)
         self._network = IncrementalNet(args["convnet_type"], False)
         self.args = args
+        init_args(args['dataset'])
 
     def after_task(self):
         self._old_network = self._network.copy().freeze()
+        self.old_centers = deepcopy(self.centerloss.centers).detach()
         self._known_classes = self._total_classes
         logging.info("Exemplar size: {}".format(self.exemplar_size))
 
@@ -69,7 +102,7 @@ class DBL(BaseLearner):
         if self._old_network is not None:
             self.sample_per_class = torch.zeros(self._total_classes)
             self.sample_per_class[:self._known_classes] = self.args['memory_size'] // self._known_classes
-            self.sample_per_class[self._known_classes:] = data_manager.num_per_class
+            self.sample_per_class[self._known_classes:] = self.num_per_class * self.args["beta"]
         logging.info(
             "Learning on {}-{}".format(self._known_classes, self._total_classes)
         )
@@ -94,6 +127,8 @@ class DBL(BaseLearner):
             self._network = nn.DataParallel(self._network, self._multiple_gpus)
         self._train(self.train_loader, self.test_loader)
         self.build_rehearsal_memory(data_manager, self.samples_per_class)
+        self.visualize_FCweights()
+        self.visualize_TSNE(data_manager)
         if len(self._multiple_gpus) > 1:
             self._network = self._network.module
 
@@ -104,7 +139,6 @@ class DBL(BaseLearner):
 
         if self._cur_task == 0:
             optimizer = optim.SGD(
-                # self._network.parameters(),
                 list(self._network.parameters())+list(self.centerloss.parameters()),
                 momentum=0.9,
                 lr=init_lr,
@@ -116,7 +150,6 @@ class DBL(BaseLearner):
             self._init_train(train_loader, test_loader, optimizer, scheduler)
         else:
             optimizer = optim.SGD(
-                # self._network.parameters(),
                 list(self._network.parameters())+list(self.centerloss.parameters()),
                 lr=lrate,
                 momentum=0.9,
@@ -135,12 +168,13 @@ class DBL(BaseLearner):
             correct, total = 0, 0
             for i, (_, inputs, targets) in enumerate(train_loader):
                 inputs, targets = inputs.to(self._device), targets.to(self._device)
-                # logits = self._network(inputs)["logits"]
                 outputs = self._network(inputs)
                 logits = outputs['logits']
                 features = outputs['features']
 
-                loss = F.cross_entropy(logits, targets) + self.centerloss(features, targets)
+                protoloss, _ = self.centerloss(features, targets, self._known_classes) 
+                CEloss = F.cross_entropy(logits, targets)
+                loss = protoloss + CEloss
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -149,12 +183,14 @@ class DBL(BaseLearner):
                 _, preds = torch.max(logits, dim=1)
                 correct += preds.eq(targets.expand_as(preds)).cpu().sum()
                 total += len(targets)
-
+                wandb.log({'protoloss':protoloss,
+                           'CEloss':CEloss})
             scheduler.step()
             train_acc = np.around(tensor2numpy(correct) * 100 / total, decimals=2)
 
             if epoch % 5 == 0:
                 test_acc = self._compute_accuracy(self._network, test_loader)
+                # test_acc = self._compute_acc_by_centers(self._network, test_loader)
                 info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}, Test_accy {:.2f}".format(
                     self._cur_task,
                     epoch + 1,
@@ -183,12 +219,13 @@ class DBL(BaseLearner):
             correct, total = 0, 0
             for i, (_, inputs, targets) in enumerate(train_loader):
                 inputs, targets = inputs.to(self._device), targets.to(self._device)
-                # logits = self._network(inputs)["logits"]
                 outputs = self._network(inputs)
                 logits = outputs['logits']
                 features = outputs['features']
+                with torch.no_grad():
+                    old_features = self._old_network(inputs)['features']
 
-                #loss_clf = F.cross_entropy(logits, targets)
+                # loss_clf = F.cross_entropy(logits, targets)
                 loss_kd = _KD_loss(
                     logits[:, : self._known_classes],
                     self._old_network(inputs)["logits"],
@@ -200,7 +237,8 @@ class DBL(BaseLearner):
                 _logits = logits + spc.log()
                 OBCE_loss = F.cross_entropy(_logits, targets)
 
-                loss = loss_kd + self.centerloss(features, targets) + OBCE_loss 
+                protoloss, kd_center = self.centerloss(features, targets, self._known_classes, self.old_centers, old_features)
+                loss = loss_kd + protoloss + kd_center + OBCE_loss ## + loss_clf 
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -211,10 +249,16 @@ class DBL(BaseLearner):
                 correct += preds.eq(targets.expand_as(preds)).cpu().sum()
                 total += len(targets)
 
+                wandb.log({'protoloss':protoloss,
+                           'CEloss':OBCE_loss,
+                           'kdloss':loss_kd,
+                           'kd_center':kd_center})
+
             scheduler.step()
             train_acc = np.around(tensor2numpy(correct) * 100 / total, decimals=2)
             if epoch % 5 == 0:
                 test_acc = self._compute_accuracy(self._network, test_loader)
+                # test_acc = self._compute_acc_by_centers(self._network, test_loader)
                 info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}, Test_accy {:.2f}".format(
                     self._cur_task,
                     epoch + 1,
