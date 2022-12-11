@@ -21,7 +21,7 @@ class CenterLossNet(nn.Module):
         self.centers = nn.Parameter(torch.randn(cls_num, self.feature_dim))
         nn.init.kaiming_normal_(self.centers, mode='fan_out')
         self.s = 64
-        self.m = 5 / cls_num 
+        self.m = 1 / cls_num 
         self.eps = 1e-7
         self.m2 = 5 / cls_num
         self.bias = nn.Parameter(torch.zeros(cls_num,1))
@@ -53,7 +53,7 @@ class CenterLossNet(nn.Module):
 
         
 
-    def forward(self, features, labels, old_classes=None, old_centers=None, old_features=None, reduction='mean'):
+    def forward(self, features, labels, old_classes=None, old_features=None, reduction='mean'):
         # 特征向量归一化
         _features = F.normalize(features, dim=1)
         _centers = F.normalize(self.centers, dim=1)
@@ -112,13 +112,25 @@ class CenterLossNet(nn.Module):
         # denominator = torch.exp(pos_logits) + torch.exp(neg_logits)
         # L = pos_logits - torch.log(denominator)
         # loss = -torch.mean(L)
-
-        '''pos_logits = torch.mm(_features, _centers.t()).gather(1,labels.unsqueeze(1))
-        neg_logits = torch.mm(_features, neg_syn_norm.t()).gather(1,labels.unsqueeze(1))
-        top = self.s * torch.cos(torch.acos(torch.clamp(pos_logits, -1.+self.eps, 1-self.eps)) + self.m)
-        denominator = torch.exp(top) + torch.exp(neg_logits * self.s)
-        L = top -torch.log(denominator)
-        loss = -torch.mean(L)'''
+        one_hot = F.one_hot(labels, self.classes)
+        logits = torch.mm(_features, _centers.t())
+        pos_logits = logits.gather(1,labels.unsqueeze(1))
+        pos_theta = torch.acos(torch.clamp(pos_logits, -1.+self.eps, 1-self.eps)) + self.m
+        neg_theta = torch.acos(torch.clamp(logits, -1.+self.eps, 1-self.eps)) 
+        variance = 0
+        if old_classes > 0:
+            mask = labels < old_classes
+            pos_var = torch.var(pos_theta[mask]).item()
+            neg_var = torch.var(pos_theta[~mask]).item()
+            variance = max(self.eps, neg_var-pos_var)
+            pos_theta[mask] += torch.normal(mean=0, std=variance, size=pos_theta[mask].size(), device=labels.device)
+            neg_theta[mask] += torch.normal(mean=0, std=variance, size=neg_theta[mask].size(), device=labels.device)
+        pos_theta.clamp_(min=0, max=np.pi-self.eps)
+        neg_theta.clamp_(min=0, max=np.pi-self.eps)
+        numerator = torch.exp(self.s * torch.cos(pos_theta))
+        denominator = numerator + torch.sum(torch.exp(torch.cos(neg_theta) * self.s) * (1-one_hot), dim=1, keepdim=True)
+        L = torch.log(torch.div(numerator, denominator))
+        loss = -torch.mean(L)
 
         # pos_logits = torch.mm(_features, _centers.t()).gather(1,labels.unsqueeze(1))
         # neg_logits = torch.mm(_features, neg_syn_norm.t()).gather(1,labels.unsqueeze(1))
@@ -133,34 +145,42 @@ class CenterLossNet(nn.Module):
         # L = top -torch.log(denominator)
         # loss = -torch.mean(L)
 
-        # 改为高斯核函数
-        extend_centers = _centers.unsqueeze(0).repeat(len(_features), 1, 1)
-        extend_features = _features.unsqueeze(1).repeat(1, len(_centers), 1)
-        dis_centers_features = -torch.pow((extend_features - extend_centers), 2).sum(-1) *5 #(62.65%) #* 10 
-        if old_classes == 0:
-            variance = 0
-            loss = F.cross_entropy(dis_centers_features, labels)
-        else:
-            '''pos_metric = dis_centers_features.gather(1, labels.unsqueeze(1))
-            mask = labels < old_classes
-            one_hot = F.one_hot(labels, self.classes)
-            pos_metric[mask] += torch.from_numpy(np.array(200)).log()
-            # pdb.set_trace()
-            numerator = torch.exp(pos_metric)
-            denominator = torch.sum(torch.exp(dis_centers_features)*(1-one_hot), dim=1, keepdim=True) + numerator 
-            logits = -torch.log(torch.div(numerator, denominator))
-            loss = torch.mean(logits)'''
+        # # 改为高斯核函数
+        # extend_centers = _centers.unsqueeze(0).repeat(len(_features), 1, 1)
+        # extend_features = _features.unsqueeze(1).repeat(1, len(_centers), 1)
+        # dis_centers_features = -torch.pow((extend_features - extend_centers), 2).sum(-1)#(62.65%) #* 10 
+        # if old_classes == 0:
+        #     variance = 0
+        #     loss = F.cross_entropy(dis_centers_features, labels)
+        # else:
+        #     '''pos_metric = dis_centers_features.gather(1, labels.unsqueeze(1))
+        #     mask = labels < old_classes
+        #     one_hot = F.one_hot(labels, self.classes)
+        #     pos_metric[mask] += torch.from_numpy(np.array(200)).log()
+        #     # pdb.set_trace()
+        #     numerator = torch.exp(pos_metric)
+        #     denominator = torch.sum(torch.exp(dis_centers_features)*(1-one_hot), dim=1, keepdim=True) + numerator 
+        #     logits = -torch.log(torch.div(numerator, denominator))
+        #     loss = torch.mean(logits)'''
 
-            # 68.67
-            pos_metric = dis_centers_features.gather(1, labels.unsqueeze(1))
-            pos_metric += self.bias[labels]
-            one_hot = F.one_hot(labels, self.classes)
-            numerator = torch.exp(pos_metric)
-            denominator = torch.sum(torch.exp(dis_centers_features)*(1-one_hot), dim=1, keepdim=True) + numerator 
-            logits = -torch.log(torch.div(numerator, denominator))
-            variance = torch.var(pos_metric)
-
-            loss = torch.mean(logits) + variance
+        #     # 68.67
+        #     pos_metric = dis_centers_features.gather(1, labels.unsqueeze(1))
+        #     mask = labels < old_classes
+        #     head_var = torch.var(pos_metric[~mask])
+        #     tail_var = torch.var(pos_metric[mask])
+        #     synthesis_var = head_var - tail_var
+        #     variance = synthesis_var.item()
+        #     pos_metric[mask] -= torch.normal(mean=0, std=max(variance,0.01), size=pos_metric[mask].size(), device=labels.device)
+        #     one_hot = F.one_hot(labels, self.classes)
+        #     numerator = torch.exp(pos_metric * 5)
+        #     denominator = torch.sum(torch.exp(dis_centers_features * 5)*(1-one_hot), dim=1, keepdim=True) + numerator 
+        #     logits = -torch.log(torch.div(numerator, denominator))
+        #     # mean_all = torch.mean(self.centers, dim=0)
+        #     # variance_all = torch.pow(self.centers-mean_all, 2).mean()
+        #     # mean_old = torch.mean(self.centers[:old_classes], dim=0)
+        #     # variance_old = torch.pow(self.centers[:old_classes]-mean_old, 2).mean()
+        #     # variance = -variance_all.log() - variance_old.log()
+        #     loss = torch.mean(logits) #+ variance
 
             # dis_centers_features += self.bias
             # pos_metric = dis_centers_features.gather(1, labels.unsqueeze(1))
@@ -181,6 +201,6 @@ class CenterLossNet(nn.Module):
             centerloss = torch.sum(torch.pow(_features - centers_batch, 2)) / 2
             return centerloss
         elif reduction == 'mean':  # 返回loss和的平均值，默认为mean方式
-            return loss, variance
+            return loss, variance#dis_centers_features#
         else:
             raise ValueError("ValueError: {0} is not a valid value for reduction".format(reduction))

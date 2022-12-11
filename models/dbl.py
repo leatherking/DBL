@@ -172,8 +172,10 @@ class DBL(BaseLearner):
                 logits = outputs['logits']
                 features = outputs['features']
 
-                protoloss, _ = self.centerloss(features, targets, self._known_classes) 
+                # gaussian_logits = self.centerloss(features, targets, self._known_classes) 
                 CEloss = F.cross_entropy(logits, targets)
+                # protoloss = F.cross_entropy(gaussian_logits, targets)
+                protoloss, _ = self.centerloss(features, targets, self._known_classes)
                 loss = protoloss + CEloss
                 optimizer.zero_grad()
                 loss.backward()
@@ -222,8 +224,6 @@ class DBL(BaseLearner):
                 outputs = self._network(inputs)
                 logits = outputs['logits']
                 features = outputs['features']
-                with torch.no_grad():
-                    old_features = self._old_network(inputs)['features']
 
                 # loss_clf = F.cross_entropy(logits, targets)
                 loss_kd = _KD_loss(
@@ -237,8 +237,13 @@ class DBL(BaseLearner):
                 _logits = logits + spc.log()
                 OBCE_loss = F.cross_entropy(_logits, targets)
 
-                protoloss, kd_center = self.centerloss(features, targets, self._known_classes, self.old_centers, old_features)
-                loss = loss_kd + protoloss + kd_center + OBCE_loss ## + loss_clf 
+                # gaussian_logits = self.centerloss(features, targets, self._known_classes)
+                # gaussian_logits = gaussian_logits + spc.log()
+                # protoloss = F.cross_entropy(gaussian_logits, targets)
+
+                protoloss, variance = self.centerloss(features, targets, self._known_classes)
+
+                loss = loss_kd + protoloss + OBCE_loss#+ kd_center  ## + loss_clf 
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -252,7 +257,7 @@ class DBL(BaseLearner):
                 wandb.log({'protoloss':protoloss,
                            'CEloss':OBCE_loss,
                            'kdloss':loss_kd,
-                           'kd_center':kd_center})
+                           'variance':variance})
 
             scheduler.step()
             train_acc = np.around(tensor2numpy(correct) * 100 / total, decimals=2)
