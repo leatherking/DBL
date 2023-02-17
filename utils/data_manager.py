@@ -3,11 +3,11 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
-from utils.data import iCIFAR10, iCIFAR100, iImageNet100, iImageNet1000
+from utils.data import iCIFAR10, iCIFAR100, iImageNet100, iImageNet1000, iTinyImageNet, iCUB200
 
 
 class DataManager(object):
-    def __init__(self, dataset_name, shuffle, seed, init_cls, increment):
+    def __init__(self, dataset_name, shuffle, seed, init_cls, increment, beta=1):
         self.dataset_name = dataset_name
         self._setup_data(dataset_name, shuffle, seed)
         assert init_cls <= len(self._class_order), "No enough classes."
@@ -221,6 +221,10 @@ def _get_idata(dataset_name):
         return iImageNet1000()
     elif name == "imagenet100":
         return iImageNet100()
+    elif name == "tinyimagenet":
+        return iTinyImageNet()
+    elif name == 'cub200':
+        return iCUB200()
     else:
         raise NotImplementedError("Unknown dataset {}.".format(dataset_name))
 

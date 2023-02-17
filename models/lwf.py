@@ -11,6 +11,7 @@ from utils.inc_net import IncrementalNet
 from models.base import BaseLearner
 from utils.toolkit import target2onehot, tensor2numpy
 
+# CIFAR100
 init_epoch = 200
 init_lr = 0.1
 init_milestones = [60, 120, 160]

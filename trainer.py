@@ -70,24 +70,24 @@ def _train(args):
             logging.info("NME: {}".format(nme_accy["grouped"]))
 
             cnn_curve["top1"].append(cnn_accy["top1"])
-            cnn_curve["top5"].append(cnn_accy["top5"])
+            # cnn_curve["top5"].append(cnn_accy["top5"])
 
             nme_curve["top1"].append(nme_accy["top1"])
-            nme_curve["top5"].append(nme_accy["top5"])
+            # nme_curve["top5"].append(nme_accy["top5"])
 
             logging.info("CNN top1 curve: {}".format(cnn_curve["top1"]))
-            logging.info("CNN top5 curve: {}".format(cnn_curve["top5"]))
+            # logging.info("CNN top5 curve: {}".format(cnn_curve["top5"]))
             logging.info("NME top1 curve: {}".format(nme_curve["top1"]))
-            logging.info("NME top5 curve: {}\n".format(nme_curve["top5"]))
+            # logging.info("NME top5 curve: {}\n".format(nme_curve["top5"]))
         else:
             logging.info("No NME accuracy.")
             logging.info("CNN: {}".format(cnn_accy["grouped"]))
 
             cnn_curve["top1"].append(cnn_accy["top1"])
-            cnn_curve["top5"].append(cnn_accy["top5"])
+            # cnn_curve["top5"].append(cnn_accy["top5"])
 
             logging.info("CNN top1 curve: {}".format(cnn_curve["top1"]))
-            logging.info("CNN top5 curve: {}\n".format(cnn_curve["top5"]))
+            # logging.info("CNN top5 curve: {}\n".format(cnn_curve["top5"]))
 
 
 def _set_device(args):
@@ -105,10 +105,10 @@ def _set_device(args):
     args["device"] = gpus
 
 
-def _set_random():
-    torch.manual_seed(1)
-    torch.cuda.manual_seed(1)
-    torch.cuda.manual_seed_all(1)
+def _set_random(seed=1):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 

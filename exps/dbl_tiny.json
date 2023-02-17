@@ -1,14 +1,17 @@
 {
-    "prefix": "reproduce",
+    "prefix": "12_22_IAAM-margin-2+im-softmax",
     "dataset": "tinyimagenet",
-    "memory_size": 200,
+    "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
     "init_cls": 20,
     "increment": 20,
-    "model_name": "der",
+    "model_name": "DBL",
     "convnet_type": "resnet18",
-    "device": ["3"],
-    "seed": [1993, 1997, 1999]
+    "device": ["0"],
+    "seed": [1993],
+    "beta": 5,
+    "margin": 2
 }
+

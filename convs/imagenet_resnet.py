@@ -8,6 +8,7 @@ try:
     from torchvision.models.utils import load_state_dict_from_url
 except:
     from torch.hub import load_state_dict_from_url
+import pdb
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -206,16 +207,15 @@ class ResNet(nn.Module):
 
     def _forward_impl(self, x):
         # See note [TorchScript super()]
-        x = self.conv1(x)  # [bs, 64, 32, 32]
+        x = self.conv1(x)  # [bs, 64, 112, 112]
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        x = self.maxpool(x) # [bs, 64, 56, 56]
 
-        x_1 = self.layer1(x)  # [bs, 128, 32, 32]
-        x_2 = self.layer2(x_1)  # [bs, 256, 16, 16]
-        x_3 = self.layer3(x_2)  # [bs, 512, 8, 8]
-        x_4 = self.layer4(x_3)  # [bs, 512, 4, 4]
-
+        x_1 = self.layer1(x)  # [bs, 128, 56, 56]
+        x_2 = self.layer2(x_1)  # [bs, 256, 28, 28]
+        x_3 = self.layer3(x_2)  # [bs, 512, 14, 14]
+        x_4 = self.layer4(x_3)  # [bs, 512, 7, 7]
         pooled = self.avgpool(x_4)  # [bs, 512, 1, 1]
         features = torch.flatten(pooled, 1)  # [bs, 512]
         # x = self.fc(x)

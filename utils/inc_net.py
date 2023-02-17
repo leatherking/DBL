@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from convs.cifar_resnet import resnet32
 from convs.resnet import resnet18, resnet34, resnet50
+from convs.imagenet_resnet import Resnet18
 from convs.ucir_cifar_resnet import resnet32 as cosine_resnet32
 from convs.ucir_resnet import resnet18 as cosine_resnet18
 from convs.ucir_resnet import resnet34 as cosine_resnet34
@@ -17,6 +18,8 @@ def get_convnet(convnet_type, pretrained=False):
         return resnet32()
     elif name == "resnet18":
         return resnet18(pretrained=pretrained)
+    elif name == "imagenet_resnet18":
+        return Resnet18(pretrained=pretrained)
     elif name == "resnet34":
         return resnet34(pretrained=pretrained)
     elif name == "resnet50":
@@ -91,9 +94,9 @@ class IncrementalNet(BaseNet):
         if self.fc is not None:
             nb_output = self.fc.out_features
             weight = copy.deepcopy(self.fc.weight.data)
-            bias = copy.deepcopy(self.fc.bias.data)
+            # bias = copy.deepcopy(self.fc.bias.data)
             fc.weight.data[:nb_output] = weight
-            fc.bias.data[:nb_output] = bias
+            # fc.bias.data[:nb_output] = bias
 
         del self.fc
         self.fc = fc
@@ -228,9 +231,9 @@ class IncrementalNetWithBias(BaseNet):
         if self.fc is not None:
             nb_output = self.fc.out_features
             weight = copy.deepcopy(self.fc.weight.data)
-            bias = copy.deepcopy(self.fc.bias.data)
+            # bias = copy.deepcopy(self.fc.bias.data)
             fc.weight.data[:nb_output] = weight
-            fc.bias.data[:nb_output] = bias
+            # fc.bias.data[:nb_output] = bias
 
         del self.fc
         self.fc = fc

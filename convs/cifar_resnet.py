@@ -7,7 +7,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import pdb
 
 class DownsampleA(nn.Module):
     def __init__(self, nIn, nOut, stride):
@@ -106,8 +106,8 @@ class CifarResNet(nn.Module):
         self.stage_1 = self._make_layer(block, 16, layer_blocks, 1)
         self.stage_2 = self._make_layer(block, 32, layer_blocks, 2)
         self.stage_3 = self._make_layer(block, 64, layer_blocks, 2)
-        self.avgpool = nn.AvgPool2d(8)
-        self.out_dim = 64 * block.expansion
+        self.avgpool = nn.AvgPool2d(4)
+        self.out_dim = 64 * 4 * block.expansion
         self.fc = nn.Linear(64*block.expansion, 10)
 
         for m in self.modules():

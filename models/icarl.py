@@ -10,15 +10,19 @@ from models.base import BaseLearner
 from utils.inc_net import IncrementalNet
 from utils.inc_net import CosineIncrementalNet
 from utils.toolkit import target2onehot, tensor2numpy
+from loss import CenterLossNet
+import pdb
+import wandb
+# wandb.init(project="DBL-data-watching")
 
 EPSILON = 1e-8
 
+# CIFAR-100
 init_epoch = 200
 init_lr = 0.1
 init_milestones = [60, 120, 170]
 init_lr_decay = 0.1
 init_weight_decay = 0.0005
-
 
 epochs = 170
 lrate = 0.1
@@ -26,7 +30,21 @@ milestones = [80, 120]
 lrate_decay = 0.1
 batch_size = 128
 weight_decay = 2e-4
-num_workers = 8
+
+# CIFAR-10
+# init_epoch = 100
+# init_lr = 0.1
+# init_milestones = [40, 80]
+# init_lr_decay = 0.1
+# init_weight_decay = 0.0005
+
+# epochs = 100
+# lrate = 0.1
+# milestones = [40, 80]
+# lrate_decay = 0.1
+# batch_size = 128
+# weight_decay = 2e-4
+num_workers = 4
 T = 2
 
 
@@ -70,6 +88,8 @@ class iCaRL(BaseLearner):
             self._network = nn.DataParallel(self._network, self._multiple_gpus)
         self._train(self.train_loader, self.test_loader)
         self.build_rehearsal_memory(data_manager, self.samples_per_class)
+        # self.visualize_FCweights()
+        self.visualize_TSNE(data_manager)
         if len(self._multiple_gpus) > 1:
             self._network = self._network.module
 
@@ -125,14 +145,6 @@ class iCaRL(BaseLearner):
             train_acc = np.around(tensor2numpy(correct) * 100 / total, decimals=2)
 
             if epoch % 5 == 0:
-                info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}".format(
-                    self._cur_task,
-                    epoch + 1,
-                    init_epoch,
-                    losses / len(train_loader),
-                    train_acc,
-                )
-            else:
                 test_acc = self._compute_accuracy(self._network, test_loader)
                 info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}, Test_accy {:.2f}".format(
                     self._cur_task,
@@ -142,8 +154,16 @@ class iCaRL(BaseLearner):
                     train_acc,
                     test_acc,
                 )
+                
+            else:
+                info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}".format(
+                    self._cur_task,
+                    epoch + 1,
+                    init_epoch,
+                    losses / len(train_loader),
+                    train_acc,
+                )
             prog_bar.set_description(info)
-
         logging.info(info)
 
     def _update_representation(self, train_loader, test_loader, optimizer, scheduler):

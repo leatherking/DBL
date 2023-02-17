@@ -13,7 +13,7 @@ class SimpleLinear(nn.Module):
     Reference:
     https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/linear.py
     '''
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, bias=False):
         super(SimpleLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -26,7 +26,8 @@ class SimpleLinear(nn.Module):
 
     def reset_parameters(self):
         nn.init.kaiming_uniform_(self.weight, nonlinearity='linear')
-        nn.init.constant_(self.bias, 0)
+        if self.bias:
+            nn.init.constant_(self.bias, 0)
 
     def forward(self, input):
         return {'logits': F.linear(input, self.weight, self.bias)}

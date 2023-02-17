@@ -25,7 +25,7 @@ milestones = [80, 120, 150]
 lrate_decay = 0.1
 batch_size = 128
 weight_decay = 2e-4
-num_workers = 8
+num_workers = 4
 T = 2
 
 

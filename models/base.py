@@ -6,6 +6,20 @@ from torch import nn
 from torch.utils.data import DataLoader
 from utils.toolkit import tensor2numpy, accuracy
 from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
+import random
+# color_list = ['#F44336','#E91E63','#9C27B0','#673AB7','#3F51B5','#2196F3','#03A9F4','#00BCD4','#009688',
+# '#4CAF50','#8BC34A','#CDDC39','#FFEB3B','#FFC107','#FF9800','#FF5722','#795548','#9E9E9E','#607D8B']
+color_list = ['#EF9A9A','#F48FB1','#CE93D8','#B39DDB','#9FA8DA','#90CAF9','#81D4FA','#80DEEA','#80CBC4','#A5D6A7',
+'#C5E1A5','#E6EE9C','#FFF59D','#FFE082','#FFCC80','#FFAB91','#BCAAA4','#B0BEC5','#E57373','#F06292',
+'#BA68C8','#9575CD','#7986CB','#26C6DA','#673AB7','#3F51B5','#E91E63','#F44336','#4CAF50','#009688',
+'#2196F3','#03A9F4','#00BCD4','#FFC107','#FF9800','#CDDC39','#795548','#607D8B','#9E9E9E','#7B1FA2',
+'#512DA8','#303F9F','#0288D1','#0097A7','#00796B','#E64A19','#827717','#004D40','#BF360C','#880E4F']
+random.shuffle(color_list)
+import os
+from sklearn.manifold import TSNE
+import pdb
+import torch.nn.functional as F
 
 EPSILON = 1e-8
 batch_size = 64
@@ -19,13 +33,26 @@ class BaseLearner(object):
         self._network = None
         self._old_network = None
         self._data_memory, self._targets_memory = np.array([]), np.array([])
-        self.topk = 5
+        self.topk = 2
+        self.task_size = args["increment"]
+        self.name = "{}-{}-{}-{}-{}".format(args["prefix"], args["dataset"], args["init_cls"], args["increment"], args["convnet_type"])
 
         self._memory_size = args["memory_size"]
         self._memory_per_class = args.get("memory_per_class", None)
         self._fixed_memory = args.get("fixed_memory", False)
         self._device = args["device"][0]
         self._multiple_gpus = args["device"]
+
+        if args["dataset"] == 'cifar10':
+            self.num_per_class = 5000
+        elif args["dataset"] == 'cifar100':
+            self.num_per_class = 500
+        elif args["dataset"] == 'tinyimagenet':
+            self.num_per_class = 500
+        elif args["dataset"] == 'imagenet100':
+            self.num_per_class = 1500
+
+        self.centerloss = None
 
     @property
     def exemplar_size(self):
@@ -81,6 +108,7 @@ class BaseLearner(object):
 
     def eval_task(self):
         y_pred, y_true = self._eval_cnn(self.test_loader)
+        # y_pred, y_true = self._eval_by_centers(self.test_loader)
         cnn_accy = self._evaluate(y_pred, y_true)
 
         if hasattr(self, "_class_means"):
@@ -197,6 +225,60 @@ class BaseLearner(object):
             mean = mean / np.linalg.norm(mean)
 
             self._class_means[class_idx, :] = mean
+    
+    def visualize_TSNE(self, data_manager):
+        logging.info("TSNE Visualization...")
+        path = './visualization/{}'.format(self.name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        ''' plot tsne till now '''
+        tillNow_visual_list = []
+        for class_idx in range(self._total_classes):
+            idx_dataset = data_manager.get_dataset(
+                np.arange(class_idx, class_idx + 1),
+                source="train",
+                mode="test",
+                ret_data=False,
+            )
+            idx_loader = DataLoader(
+                idx_dataset, batch_size=batch_size, shuffle=False, num_workers=4
+            )
+            with torch.no_grad():
+                #  get features for each class
+                vectors, _ = self._extract_vectors(idx_loader)
+                tillNow_visual_list.append(vectors)
+        # color_choose = np.random.randint(low=0, high=len(color_list), size=len(tillNow_visual_list))
+        # color_choose = [[color_list[color_choose[i]]]*len(tillNow_visual_list[i]) for i in range(len(tillNow_visual_list))]
+        # color_choose = np.concatenate(np.array(color_choose))
+
+        color_choose = [[color_list[i%len(color_list)]]*len(tillNow_visual_list[i]) for i in range(len(tillNow_visual_list))]
+        # color_choose = np.concatenate(np.array(color_choose))
+        tillNow_visual_list = np.concatenate(tillNow_visual_list)
+        tsne = TSNE(n_components=2, random_state=1234).fit_transform(tillNow_visual_list)
+        plt.figure(figsize=(8,8))
+        # plt.scatter(tsne[:,0],tsne[:,1], s=1, c=color_choose)
+        categories = []
+        start = 0
+        for i in range(len(color_choose)):
+            categories.append(plt.scatter(tsne[start:start+len(color_choose[i]),0],tsne[start:start+len(color_choose[i]),1],s=1,c=color_choose[i]))
+            start += len(color_choose[i])
+        if len(categories)<40:
+            plt.legend(categories, [str(i) for i in range(len(categories))], bbox_to_anchor=(1.02, 1), loc=2, borderaxespad=0)
+        plt.savefig('./visualization/{}/classes-{}-tsne.pdf'.format(self.name, self._total_classes),dpi=120)
+    
+    def visualize_FCweights(self):
+        self._network.eval()
+        plt.figure(figsize=(10,5))
+        weight = self._network.fc.weight.data
+        size = weight.size(0)
+        with torch.no_grad():
+            weight_norm2 = torch.norm(weight, p=2, dim=1)
+        for i in range(size):
+            plt.bar(i, weight_norm2[i].cpu().data, color=color_list[i//self.task_size])
+        path = './visualization/{}'.format(self.name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        plt.savefig('./visualization/{}/task-{}-norm.pdf'.format(self.name, self._cur_task),dpi=120)
 
     def _construct_exemplar(self, data_manager, m):
         logging.info("Constructing exemplars...({} per classes)".format(m))
