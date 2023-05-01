@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from models.base import BaseLearner
 from utils.inc_net import IncrementalNet
 from utils.toolkit import target2onehot, tensor2numpy
-from loss import CenterLossNet
 
 EPSILON = 1e-8
 

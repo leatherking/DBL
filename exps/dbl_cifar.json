@@ -1,5 +1,5 @@
 {
-    "prefix": "2_17_NS",
+    "prefix": "test",
     "dataset": "cifar100",
     "memory_size": 2000,
     "memory_per_class": 20,
@@ -12,7 +12,7 @@
     "device": ["0"],
     "seed": [1993],
     "beta": 3,
-    "margin": 0,
+    "margin": 2,
     "scale": 64
 }
 

@@ -10,10 +10,8 @@ from models.base import BaseLearner
 from utils.inc_net import IncrementalNet
 from utils.inc_net import CosineIncrementalNet
 from utils.toolkit import target2onehot, tensor2numpy
-from loss import CenterLossNet
 import pdb
 import wandb
-# wandb.init(project="DBL-data-watching")
 
 EPSILON = 1e-8
 
@@ -31,19 +29,6 @@ lrate_decay = 0.1
 batch_size = 128
 weight_decay = 2e-4
 
-# CIFAR-10
-# init_epoch = 100
-# init_lr = 0.1
-# init_milestones = [40, 80]
-# init_lr_decay = 0.1
-# init_weight_decay = 0.0005
-
-# epochs = 100
-# lrate = 0.1
-# milestones = [40, 80]
-# lrate_decay = 0.1
-# batch_size = 128
-# weight_decay = 2e-4
 num_workers = 4
 T = 2
 

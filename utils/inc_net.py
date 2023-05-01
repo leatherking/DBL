@@ -10,7 +10,8 @@ from convs.ucir_resnet import resnet18 as cosine_resnet18
 from convs.ucir_resnet import resnet34 as cosine_resnet34
 from convs.ucir_resnet import resnet50 as cosine_resnet50
 from convs.linears import SimpleLinear, SplitCosineLinear, CosineLinear
-
+import torch.nn.functional as F
+import numpy as np
 
 def get_convnet(convnet_type, pretrained=False):
     name = convnet_type.lower()
@@ -468,3 +469,40 @@ class FOSTERNet(nn.Module):
         gamma = meanold / meannew * (value ** (old / increment))
         logging.info("align weights, gamma = {} ".format(gamma))
         self.fc.weight.data[-increment:, :] *= gamma
+
+
+class IAAM(nn.Module):
+    def __init__(self, cls_num=10, feature_dim=512, margin=1, scale=None):
+        super(IAAM, self).__init__()
+        self.classes = cls_num
+        self.feature_dim = feature_dim
+        self.prototypes = nn.Parameter(torch.randn(cls_num, self.feature_dim))
+        nn.init.kaiming_normal_(self.prototypes, mode='fan_out')
+        self.s = scale
+        self.m = margin / cls_num 
+        self.eps = 1e-7     
+
+    def forward(self, features, labels, old_classes=None, old_features=None, reduction='mean'):
+        _features = F.normalize(features, dim=1)
+        _prototypes = F.normalize(self.prototypes, dim=1)
+
+        one_hot = F.one_hot(labels, self.classes)
+        logits = torch.mm(_features, _prototypes.t())
+        pos_logits = logits.gather(1,labels.unsqueeze(1))
+        pos_theta = torch.acos(torch.clamp(pos_logits, -1.+self.eps, 1-self.eps))
+        neg_theta = torch.acos(torch.clamp(logits, -1.+self.eps, 1-self.eps)) 
+        variance = 0
+        if old_classes > 0:
+            mask = labels < old_classes
+            pos_var = torch.var(pos_theta[mask]).item()
+            neg_var = torch.var(pos_theta[~mask]).item()
+            variance = max(self.eps, neg_var-pos_var)
+            pos_theta[mask] += torch.normal(mean=0, std=np.sqrt(variance), size=pos_theta[mask].size(), device=labels.device)
+        pos_theta.clamp_(min=0, max=np.pi)
+        neg_theta.clamp_(min=0, max=np.pi)
+        numerator = torch.exp(self.s * (torch.cos(pos_theta)-self.m))
+        denominator = numerator + torch.sum(torch.exp(torch.cos(neg_theta) * self.s) * (1-one_hot), dim=1, keepdim=True)
+        L = torch.log(torch.div(numerator, denominator))
+        loss = -torch.mean(L)
+
+        return loss
