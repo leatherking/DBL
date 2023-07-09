@@ -1,15 +1,15 @@
 {
-    "prefix": "2_11-icarl",
-    "dataset": "cifar10",
+    "prefix": "rebuttal",
+    "dataset": "tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
-    "init_cls": 2,
-    "increment": 2,
+    "init_cls": 40,
+    "increment": 40,
     "model_name": "icarl",
     "convnet_type": "resnet18",
-    "device": ["2"],
+    "device": ["0"],
     "seed": [1993,1997,1999]
 }
 

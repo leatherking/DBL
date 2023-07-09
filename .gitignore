@@ -1,2 +1,5 @@
 data/
 __pycache__/
+logs/
+visualization
+datasets/

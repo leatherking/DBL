@@ -150,7 +150,7 @@ class iTinyImageNet(iData):
         if os.path.isdir(root) and len(os.listdir(root)) > 0:
             print('Download not needed, files already on disk.')
         else:
-            from google_drive_downloader import GoogleDriveDownloader as gdd
+            raise ValueError("None")
             print('Downloading dataset')
             gdd.download_file_from_google_drive(
                     file_id='1Sy3ScMBr0F4se8VZ6TAwDYF-nNGAAdxj',

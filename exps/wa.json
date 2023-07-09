@@ -1,14 +1,14 @@
 {
-    "prefix": "reproduce-wa",
-    "dataset": "cifar100",
+    "prefix": "rebuttal",
+    "dataset": "tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
-    "init_cls": 10,
-    "increment": 10,
+    "init_cls": 20,
+    "increment": 20,
     "model_name": "wa",
     "convnet_type": "resnet18",
-    "device": ["3"],
-    "seed": [1993]
+    "device": ["0"],
+    "seed": [1993,1997,1999]
 }
