@@ -424,9 +424,9 @@ class FOSTERNet(nn.Module):
         if self.fc is not None:
             nb_output = self.fc.out_features
             weight = copy.deepcopy(self.fc.weight.data)
-            bias = copy.deepcopy(self.fc.bias.data)
+            # bias = copy.deepcopy(self.fc.bias.data)
             fc.weight.data[:nb_output, : self.feature_dim - self.out_dim] = weight
-            fc.bias.data[:nb_output] = bias
+            # fc.bias.data[:nb_output] = bias
             self.convnets[-1].load_state_dict(self.convnets[-2].state_dict())
 
         self.oldfc = self.fc
@@ -444,10 +444,10 @@ class FOSTERNet(nn.Module):
 
     def copy_fc(self, fc):
         weight = copy.deepcopy(fc.weight.data)
-        bias = copy.deepcopy(fc.bias.data)
+        # bias = copy.deepcopy(fc.bias.data)
         n, m = weight.shape[0], weight.shape[1]
         self.fc.weight.data[:n, :m] = weight
-        self.fc.bias.data[:n] = bias
+        # self.fc.bias.data[:n] = bias
 
     def freeze(self):
         for param in self.parameters():
@@ -482,7 +482,7 @@ class IAAM(nn.Module):
         self.m = margin / cls_num 
         self.eps = 1e-7     
 
-    def forward(self, features, labels, old_classes=None, old_features=None, reduction='mean'):
+    def forward(self, features, labels, old_classes=None):
         _features = F.normalize(features, dim=1)
         _prototypes = F.normalize(self.prototypes, dim=1)
 
@@ -494,15 +494,51 @@ class IAAM(nn.Module):
         variance = 0
         if old_classes > 0:
             mask = labels < old_classes
-            pos_var = torch.var(pos_theta[mask]).item()
-            neg_var = torch.var(pos_theta[~mask]).item()
-            variance = max(self.eps, neg_var-pos_var)
+            old_var = torch.var(pos_theta[mask]).item()
+            new_var = torch.var(pos_theta[~mask]).item()
+            variance = max(self.eps, new_var-old_var)
             pos_theta[mask] += torch.normal(mean=0, std=np.sqrt(variance), size=pos_theta[mask].size(), device=labels.device)
         pos_theta.clamp_(min=0, max=np.pi)
         neg_theta.clamp_(min=0, max=np.pi)
         numerator = torch.exp(self.s * (torch.cos(pos_theta)-self.m))
         denominator = numerator + torch.sum(torch.exp(torch.cos(neg_theta) * self.s) * (1-one_hot), dim=1, keepdim=True)
         L = torch.log(torch.div(numerator, denominator))
+        loss = -torch.mean(L)
+
+        return loss
+
+    def _forward(self, aux_features, features, labels, old_classes=None):
+        _aux_features = F.normalize(aux_features, dim=1)
+        _features = F.normalize(features, dim=1)
+        _prototypes = F.normalize(self.prototypes, dim=1)
+
+        one_hot = F.one_hot(labels, self.classes)
+        aux_logits = torch.mm(_features, _prototypes.t())
+        aux_pos_logits = aux_logits.gather(1,labels.unsqueeze(1))
+        aux_pos_theta = torch.acos(torch.clamp(aux_pos_logits, -1.+self.eps, 1-self.eps))
+        aux_neg_theta = torch.acos(torch.clamp(aux_logits, -1.+self.eps, 1-self.eps)) 
+        
+        logits = torch.mm(_features, _prototypes.t())
+        pos_logits = logits.gather(1,labels.unsqueeze(1))
+        pos_theta = torch.acos(torch.clamp(pos_logits, -1.+self.eps, 1-self.eps))
+        neg_theta = torch.acos(torch.clamp(logits, -1.+self.eps, 1-self.eps)) 
+        variance = 0
+        if old_classes > 0:
+            mask = labels < old_classes
+            old_var = torch.var(aux_pos_theta[mask]).item()
+            new_var = torch.var(aux_pos_theta[~mask]).item()
+            variance = max(self.eps, new_var-old_var)
+            pos_theta[mask] += torch.normal(mean=0, std=np.sqrt(variance), size=pos_theta[mask].size(), device=labels.device)
+            aux_pos_theta[mask] += torch.normal(mean=0, std=np.sqrt(variance), size=aux_pos_theta[mask].size(), device=labels.device)
+        pos_theta.clamp_(min=0, max=np.pi)
+        neg_theta.clamp_(min=0, max=np.pi)
+        aux_pos_theta.clamp_(min=0, max=np.pi)
+        aux_neg_theta.clamp_(min=0, max=np.pi)
+        numerator = torch.exp(self.s * (torch.cos(pos_theta)-self.m))
+        aux_numerator = torch.exp(self.s * (torch.cos(aux_pos_theta)-self.m))
+        denominator = numerator + torch.sum(torch.exp(torch.cos(neg_theta) * self.s) * (1-one_hot), dim=1, keepdim=True)
+        aux_denominator = aux_numerator + torch.sum(torch.exp(torch.cos(aux_neg_theta) * self.s) * (1-one_hot), dim=1, keepdim=True)
+        L = torch.log(torch.div(numerator, denominator)) + torch.log(torch.div(aux_numerator, aux_denominator))
         loss = -torch.mean(L)
 
         return loss

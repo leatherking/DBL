@@ -1,14 +1,14 @@
 {
-    "prefix": "2_11_podnet",
-    "dataset": "cifar10",
+    "prefix": "rebuttal",
+    "dataset": "tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
-    "init_cls": 2,
-    "increment": 2,
+    "init_cls": 20,
+    "increment": 20,
     "model_name": "podnet",
     "convnet_type": "resnet18",
-    "device": ["3"],
+    "device": ["1"],
     "seed": [1993,1997,1999]
 }

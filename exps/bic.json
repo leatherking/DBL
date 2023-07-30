@@ -1,14 +1,14 @@
 {
-    "prefix": "reproduce",
-    "dataset": "imagenet100",
+    "prefix": "rebuttal",
+    "dataset": "tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
-    "init_cls": 5,
-    "increment": 5,
+    "init_cls": 20,
+    "increment": 20,
     "model_name": "bic",
-    "convnet_type": "imagenet_resnet18",
+    "convnet_type": "resnet18",
     "device": ["1"],
-    "seed": [1993]
+    "seed": [1993,1997,1999]
 }
