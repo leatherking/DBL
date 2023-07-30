@@ -12,7 +12,7 @@ except:
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_resnet50_2', 'wide_resnet101_2']
-
+import pdb
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -151,7 +151,7 @@ class ResNet(nn.Module):
                                bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # Removed in _forward_impl for cifar
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # Removed in _forward_impl for cifar
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -209,7 +209,7 @@ class ResNet(nn.Module):
         x = self.conv1(x)  # [bs, 64, 32, 32]
         x = self.bn1(x)
         x = self.relu(x)
-        # x = self.maxpool(x)
+        x = self.maxpool(x)
 
         x_1 = self.layer1(x)  # [bs, 128, 32, 32]
         x_2 = self.layer2(x_1)  # [bs, 256, 16, 16]

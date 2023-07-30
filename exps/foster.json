@@ -3,7 +3,7 @@
     "dataset":"tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
-    "fixed_memory": true,
+    "fixed_memory": false,
     "shuffle": true,
     "init_cls": 20,
     "increment": 20,

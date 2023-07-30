@@ -1,5 +1,5 @@
 {
-    "prefix": "rebuttal",
+    "prefix": "rebuttal_7_23",
     "dataset": "tinyimagenet",
     "memory_size": 2000,
     "memory_per_class": 20,
@@ -10,5 +10,5 @@
     "model_name": "wa",
     "convnet_type": "resnet18",
     "device": ["0"],
-    "seed": [1993,1997,1999]
+    "seed": [1993]
 }
