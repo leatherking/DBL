@@ -33,7 +33,7 @@ class DBL(BaseLearner):
     def __init__(self, args):
         super().__init__(args)
         self._network = IncrementalNet(args["convnet_type"], False)
-        self.aux_network = IncrementalNet(args["convnet_type"], False)
+        # self.aux_network = IncrementalNet(args["convnet_type"], False)
         self.args = args
         global margin
         margin = args['margin']
@@ -49,7 +49,7 @@ class DBL(BaseLearner):
             self._cur_task
         )
         self._network.update_fc(self._total_classes)
-        self.aux_network.update_fc(self._total_classes)
+        # self.aux_network.update_fc(self._total_classes)
         self.IAAM_loss = IAAM(cls_num=self._total_classes, feature_dim=self.feature_dim, margin=margin, scale=self.args['scale']).to(self._device)
         if self._old_network is not None:
             self.sample_per_class = torch.zeros(self._total_classes)
@@ -86,7 +86,7 @@ class DBL(BaseLearner):
 
     def _train(self, train_loader, test_loader):
         self._network.to(self._device)
-        self.aux_network.to(self._device)
+        # self.aux_network.to(self._device)
         if self._old_network is not None:
             self._old_network.to(self._device)
 
@@ -105,7 +105,7 @@ class DBL(BaseLearner):
             self._init_train(train_loader, test_loader, optimizer, scheduler)
         else:
             optimizer = optim.SGD(
-                list(self._network.parameters())+list(self.IAAM_loss.parameters())+list(self.aux_network.parameters()),
+                list(self._network.parameters())+list(self.IAAM_loss.parameters()),#+list(self.aux_network.parameters()),
                 # self._network.parameters(),
                 lr=lrate,
                 momentum=0.9,
@@ -172,18 +172,18 @@ class DBL(BaseLearner):
         prog_bar = tqdm(range(epochs))
         for _, epoch in enumerate(prog_bar):
             self._network.train()
-            self.aux_network.train()
+            # self.aux_network.train()
             losses = 0.0
             correct, total = 0, 0
             for i, (_, inputs, targets) in enumerate(train_loader):
                 inputs, targets = inputs.to(self._device), targets.to(self._device)
                 outputs = self._network(inputs)
-                aux_outputs = self.aux_network(inputs)
+                # aux_outputs = self.aux_network(inputs)
                 logits = outputs['logits']
                 features = outputs['features']
                 
-                aux_logits = aux_outputs['logits']
-                aux_features = aux_outputs['features']
+                # aux_logits = aux_outputs['logits']
+                # aux_features = aux_outputs['features']
 
                 loss_kd = _KD_loss(
                     logits[:, : self._known_classes],
@@ -194,9 +194,9 @@ class DBL(BaseLearner):
                 spc = self.sample_per_class.type_as(logits)
                 spc = spc.unsqueeze(0).expand(logits.shape[0], -1)
                 _logits = logits + spc.log()
-                im_softmax = F.cross_entropy(_logits, targets) + F.cross_entropy(aux_logits, targets)
+                im_softmax = F.cross_entropy(_logits, targets) #+ F.cross_entropy(aux_logits, targets)
 
-                IAAM_loss = self.IAAM_loss._forward(aux_features, features, targets, self._known_classes)
+                IAAM_loss = self.IAAM_loss(features, targets, self._known_classes) #._forward(aux_features, features, targets, self._known_classes)
 
                 loss = loss_kd + IAAM_loss + im_softmax
 

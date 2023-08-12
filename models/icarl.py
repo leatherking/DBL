@@ -74,7 +74,7 @@ class iCaRL(BaseLearner):
         self._train(self.train_loader, self.test_loader)
         self.build_rehearsal_memory(data_manager, self.samples_per_class)
         # self.visualize_FCweights()
-        self.visualize_TSNE(data_manager)
+        # self.visualize_TSNE(data_manager)
         if len(self._multiple_gpus) > 1:
             self._network = self._network.module
 

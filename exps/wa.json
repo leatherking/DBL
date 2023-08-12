@@ -1,14 +1,14 @@
 {
-    "prefix": "rebuttal_7_23",
-    "dataset": "tinyimagenet",
+    "prefix": "rebuttal_8_5_p-value",
+    "dataset": "cifar100",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
     "shuffle": true,
-    "init_cls": 20,
-    "increment": 20,
+    "init_cls": 10,
+    "increment": 10,
     "model_name": "wa",
     "convnet_type": "resnet18",
-    "device": ["0"],
-    "seed": [1993]
+    "device": [3],
+    "seed": [2058, 1058, 5906, 7943, 3169, 7017, 9775]
 }
