@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.dirname(__file__))
 import numpy as np
 from torchvision import datasets, transforms
 from utils.toolkit import split_images_labels #
@@ -31,8 +33,8 @@ class iCIFAR10(iData):
     class_order = np.arange(10).tolist()
 
     def download_data(self):
-        train_dataset = datasets.cifar.CIFAR10("/home/myc/myc_ssd/DBL/datasets", train=True, download=True)
-        test_dataset = datasets.cifar.CIFAR10("/home/myc/myc_ssd/DBL/datasets", train=False, download=True)
+        train_dataset = datasets.cifar.CIFAR10("datasets", train=True, download=True)
+        test_dataset = datasets.cifar.CIFAR10("datasets", train=False, download=True)
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets
         )
@@ -59,8 +61,8 @@ class iCIFAR100(iData):
     class_order = np.arange(100).tolist()
 
     def download_data(self):
-        train_dataset = datasets.cifar.CIFAR100("/home/myc/myc_ssd/DBL/datasets", train=True, download=True)
-        test_dataset = datasets.cifar.CIFAR100("/home/myc/myc_ssd/DBL/datasets", train=False, download=True)
+        train_dataset = datasets.cifar.CIFAR100("datasets", train=True, download=True)
+        test_dataset = datasets.cifar.CIFAR100("datasets", train=False, download=True)
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets
         )
