@@ -7,6 +7,7 @@ Owing to the superior performances, exemplar-based methods with knowledge distil
 ## How to use
 
 ```
+pip install -r requirements.txt
 python main.py --config=./exps/dbl_cifar.json
 ```
 
