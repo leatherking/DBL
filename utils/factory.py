@@ -12,7 +12,6 @@ from models.podnet import PODNet
 from models.rmm import RMM_FOSTER, RMM_iCaRL
 from models.wa import WA
 from models.dbl import DBL
-from models.dbl_imagenet import DBL_imgnet
 
 def get_model(model_name, args):
     name = model_name.lower()
@@ -21,8 +20,6 @@ def get_model(model_name, args):
         return iCaRL(args)
     elif name == "dbl":
         return DBL(args)
-    elif name == "dbl_imagenet":
-        return DBL_imgnet(args)
     elif name == "bic":
         return BiC(args)
     elif name == "podnet":

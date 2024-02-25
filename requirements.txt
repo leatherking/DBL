@@ -1,0 +1,12 @@
+matplotlib==3.5.2
+numpy==1.19.5
+Pillow==9.2.0
+Pillow==10.2.0
+quadprog==0.1.12
+scikit_learn==1.0.2
+scipy==1.9.1
+thop==0.1.1.post2209072238
+torch==1.13.0+cu117
+torchvision==0.14.0+cu117
+tqdm==4.65.0
+wandb==0.16.3
