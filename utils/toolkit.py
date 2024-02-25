@@ -1,7 +1,18 @@
 import os
 import numpy as np
 import torch
+from thop import profile
 
+def count_FLOPs(model, data_name):
+    if data_name.lower() in ['cifar10', 'cifar100']:
+        input = torch.randn(1,3,32,32)
+    elif data_name in ['imagenet']:
+        input = torch.randn(1,3,224,224)
+    elif data_name in ['tiny_imagenet']:
+        input = torch.randn(1,3,64,64)
+    
+    macs, params = profile(model, inputs=(input,))
+    return macs, params
 
 def count_parameters(model, trainable=False):
     if trainable:

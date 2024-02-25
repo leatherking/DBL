@@ -31,8 +31,8 @@ class iCIFAR10(iData):
     class_order = np.arange(10).tolist()
 
     def download_data(self):
-        train_dataset = datasets.cifar.CIFAR10("/homedata/myc/myc_ssd/DBL/datasets", train=True, download=True)
-        test_dataset = datasets.cifar.CIFAR10("/homedata/myc/myc_ssd/DBL/datasets", train=False, download=True)
+        train_dataset = datasets.cifar.CIFAR10("/home/myc/myc_ssd/DBL/datasets", train=True, download=True)
+        test_dataset = datasets.cifar.CIFAR10("/home/myc/myc_ssd/DBL/datasets", train=False, download=True)
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets
         )
@@ -59,8 +59,8 @@ class iCIFAR100(iData):
     class_order = np.arange(100).tolist()
 
     def download_data(self):
-        train_dataset = datasets.cifar.CIFAR100("/homedata/myc/myc_ssd/DBL/datasets", train=True, download=True)
-        test_dataset = datasets.cifar.CIFAR100("/homedata/myc/myc_ssd/DBL/datasets", train=False, download=True)
+        train_dataset = datasets.cifar.CIFAR100("/home/myc/myc_ssd/DBL/datasets", train=True, download=True)
+        test_dataset = datasets.cifar.CIFAR100("/home/myc/myc_ssd/DBL/datasets", train=False, download=True)
         self.train_data, self.train_targets = train_dataset.data, np.array(
             train_dataset.targets
         )
@@ -118,8 +118,8 @@ class iImageNet100(iData):
     class_order = np.arange(100).tolist()
 
     def download_data(self):
-        train_dir = "/home/myc/CNCE/datasets/seed_1993_subset_100_imagenet/data/train/"
-        test_dir = "/home/myc/CNCE/datasets/seed_1993_subset_100_imagenet/data/val/"
+        train_dir = "/home/myc/myc_ssd/ECCV22-FOSTER/data/seed_1993_subset_100_imagenet/data/train/"
+        test_dir = "/home/myc/myc_ssd/ECCV22-FOSTER/data/seed_1993_subset_100_imagenet/data/val/"
 
         train_dset = datasets.ImageFolder(train_dir)
         test_dset = datasets.ImageFolder(test_dir)
@@ -146,7 +146,7 @@ class iTinyImageNet(iData):
     class_order = np.arange(200).tolist()
 
     def download_data(self):
-        root = '/homedata/myc/myc_ssd/DBL/datasets/tinyimagenet'
+        root = '/home/myc/myc_ssd/DBL/datasets/tinyimagenet'
         if os.path.isdir(root) and len(os.listdir(root)) > 0:
             print('Download not needed, files already on disk.')
         else:

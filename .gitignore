@@ -1,5 +1,6 @@
 data/
-__pycache__/
+__*cache__
 logs/
 visualization
 datasets/
+.vscode

@@ -14,7 +14,7 @@ from copy import deepcopy
 
 EPSILON = 1e-8
 init_epoch = 200
-init_lr = 0.1
+init_lr = 0.4
 init_milestones = [60, 120, 170]
 init_lr_decay = 0.1
 init_weight_decay = 0.0005
@@ -33,6 +33,7 @@ class DBL(BaseLearner):
     def __init__(self, args):
         super().__init__(args)
         self._network = IncrementalNet(args["convnet_type"], False)
+        self.IAAM_loss = None
         # self.aux_network = IncrementalNet(args["convnet_type"], False)
         self.args = args
         global margin
@@ -196,7 +197,7 @@ class DBL(BaseLearner):
                 _logits = logits + spc.log()
                 im_softmax = F.cross_entropy(_logits, targets) #+ F.cross_entropy(aux_logits, targets)
 
-                IAAM_loss = self.IAAM_loss(features, targets, self._known_classes) #._forward(aux_features, features, targets, self._known_classes)
+                IAAM_loss = self.IAAM_loss(features, targets, self._known_classes)#._forward(aux_features, features, targets, self._known_classes)
 
                 loss = loss_kd + IAAM_loss + im_softmax
 

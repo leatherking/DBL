@@ -315,9 +315,9 @@ class DERNet(nn.Module):
         if self.fc is not None:
             nb_output = self.fc.out_features
             weight = copy.deepcopy(self.fc.weight.data)
-            bias = copy.deepcopy(self.fc.bias.data)
+            # bias = copy.deepcopy(self.fc.bias.data)
             fc.weight.data[:nb_output, : self.feature_dim - self.out_dim] = weight
-            fc.bias.data[:nb_output] = bias
+            # fc.bias.data[:nb_output] = bias
 
         del self.fc
         self.fc = fc

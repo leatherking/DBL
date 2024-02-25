@@ -4,7 +4,7 @@ import copy
 import torch
 from utils import factory
 from utils.data_manager import DataManager
-from utils.toolkit import count_parameters
+from utils.toolkit import count_parameters, count_FLOPs
 import os
 
 
