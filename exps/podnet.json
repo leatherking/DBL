@@ -1,6 +1,6 @@
 {
     "prefix": "rebuttal_8_19",
-    "dataset": "imagenet100",
+    "dataset": "cifar100",
     "memory_size": 2000,
     "memory_per_class": 20,
     "fixed_memory": false,
@@ -8,7 +8,7 @@
     "init_cls": 5,
     "increment": 5,
     "model_name": "podnet",
-    "convnet_type": "imagenet_resnet18",
+    "convnet_type": "resnet18",
     "device": ["1"],
     "seed": [1997,1999]
 }

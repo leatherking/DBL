@@ -1,6 +1,6 @@
 {
     "prefix": "reproduce",
-    "dataset": "imagenet100",
+    "dataset": "cifar100",
     "memory_size": 0,
     "memory_per_class": 0,
     "fixed_memory": false,
@@ -8,7 +8,7 @@
     "init_cls": 10,
     "increment": 10,
     "model_name": "lwf",
-    "convnet_type": "imagenet_resnet18",
+    "convnet_type": "resnet18",
     "device": ["0","1"],
     "seed": [1993]
 }
